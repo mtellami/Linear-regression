@@ -2,18 +2,29 @@ import argparse
 import sys
 from pathlib import Path
 
-from linear_regression import LinearRegressionError, evaluate, load_data, load_model
+from linear_regression import (
+    LinearRegressionError,
+    evaluate,
+    load_data,
+    load_model,
+)
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 
 
 def build_parser() -> argparse.ArgumentParser:
-    parser = argparse.ArgumentParser(description="Calculate MAE, RMSE and R2 for a trained model.")
-    parser.add_argument(
-        "--data", default=str(PROJECT_ROOT / "data" / "data.csv"), help="CSV file with km,price columns"
+    parser = argparse.ArgumentParser(
+        description="Calculate MAE, RMSE and R2 for a trained model."
     )
     parser.add_argument(
-        "--model", default=str(PROJECT_ROOT / "data" / "model.json"), help="JSON file containing theta0 and theta1"
+        "--data",
+        default=str(PROJECT_ROOT / "data" / "data.csv"),
+        help="CSV file with km,price columns",
+    )
+    parser.add_argument(
+        "--model",
+        default=str(PROJECT_ROOT / "data" / "model.json"),
+        help="JSON file containing theta0 and theta1",
     )
     return parser
 
@@ -33,7 +44,10 @@ def main(argv: list[str] | None = None) -> int:
         print("R2   = undefined (target prices are constant)")
     else:
         print(f"R2   = {metrics.r2:.6f}")
-    print(f"Evaluated on {len(prices)} rows from {args.data}: this measures fit on that dataset.")
+    print(
+        f"Evaluated on {len(prices)} rows from {args.data}: "
+        "this measures fit on that dataset."
+    )
     return 0
 
 

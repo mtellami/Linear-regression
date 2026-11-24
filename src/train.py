@@ -4,7 +4,14 @@ import os
 import sys
 from pathlib import Path
 
-from linear_regression import DataError, TrainingError, load_data, predict_price, save_model, train
+from linear_regression import (
+    DataError,
+    TrainingError,
+    load_data,
+    predict_price,
+    save_model,
+    train,
+)
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 
@@ -30,21 +37,37 @@ def positive_int(text: str) -> int:
 
 
 def build_parser() -> argparse.ArgumentParser:
-    parser = argparse.ArgumentParser(description="Train a linear regression model for car prices.")
-    parser.add_argument(
-        "--data", default=str(PROJECT_ROOT / "data" / "data.csv"), help="CSV file with km,price columns"
+    parser = argparse.ArgumentParser(
+        description="Train a linear regression model for car prices."
     )
     parser.add_argument(
-        "--model", default=str(PROJECT_ROOT / "data" / "model.json"), help="JSON file to save theta0 and theta1"
+        "--data",
+        default=str(PROJECT_ROOT / "data" / "data.csv"),
+        help="CSV file with km,price columns",
+    )
+    parser.add_argument(
+        "--model",
+        default=str(PROJECT_ROOT / "data" / "model.json"),
+        help="JSON file to save theta0 and theta1",
     )
     parser.add_argument("--learning-rate", type=positive_float, default=0.01)
     parser.add_argument("--max-iterations", type=positive_int, default=100000)
-    parser.add_argument("--plot", action="store_true", help="display the data and fitted line")
-    parser.add_argument("--plot-output", metavar="PATH", help="save the graph to PATH")
+    parser.add_argument(
+        "--plot", action="store_true", help="display the data and fitted line"
+    )
+    parser.add_argument(
+        "--plot-output", metavar="PATH", help="save the graph to PATH"
+    )
     return parser
 
 
-def plot_results(mileages: list[float], prices: list[float], model, output: str | None, show: bool) -> None:
+def plot_results(
+    mileages: list[float],
+    prices: list[float],
+    model,
+    output: str | None,
+    show: bool,
+) -> None:
     try:
         import matplotlib
 
@@ -52,7 +75,10 @@ def plot_results(mileages: list[float], prices: list[float], model, output: str 
             matplotlib.use("Agg")
         import matplotlib.pyplot as plt
     except ImportError as exc:
-        raise RuntimeError("plotting requires matplotlib: pip install -r requirements-plot.txt") from exc
+        raise RuntimeError(
+            "plotting requires matplotlib: "
+            "pip install -r requirements-plot.txt"
+        ) from exc
 
     figure, axes = plt.subplots()
     axes.scatter(mileages, prices, label="data")
@@ -82,18 +108,32 @@ def main(argv: list[str] | None = None) -> int:
     args = build_parser().parse_args(argv)
     try:
         mileages, prices = load_data(args.data)
-        result = train(mileages, prices, args.learning_rate, args.max_iterations)
+        result = train(
+            mileages, prices, args.learning_rate, args.max_iterations
+        )
         save_model(result.model, args.model)
         if args.plot or args.plot_output:
-            plot_results(mileages, prices, result.model, args.plot_output, args.plot)
-    except (DataError, TrainingError, OSError, RuntimeError, ValueError) as exc:
+            plot_results(
+                mileages, prices, result.model, args.plot_output, args.plot
+            )
+    except (
+        DataError,
+        TrainingError,
+        OSError,
+        RuntimeError,
+        ValueError,
+    ) as exc:
         print(f"Error: {exc}", file=sys.stderr)
         return 1
 
     if result.converged:
         print(f"Converged after {result.iterations} iterations")
     else:
-        print(f"Warning: reached {args.max_iterations} iterations without converging", file=sys.stderr)
+        print(
+            f"Warning: reached {args.max_iterations} iterations "
+            "without converging",
+            file=sys.stderr,
+        )
         print(f"Training stopped after {result.iterations} iterations")
     print(f"theta0 = {result.model.theta0:.6f}")
     print(f"theta1 = {result.model.theta1:.6f}")

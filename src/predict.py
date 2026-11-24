@@ -2,15 +2,24 @@ import argparse
 import sys
 from pathlib import Path
 
-from linear_regression import LinearRegressionError, load_model, parse_mileage, predict_price
+from linear_regression import (
+    LinearRegressionError,
+    load_model,
+    parse_mileage,
+    predict_price,
+)
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 
 
 def build_parser() -> argparse.ArgumentParser:
-    parser = argparse.ArgumentParser(description="Estimate a car price from its mileage.")
+    parser = argparse.ArgumentParser(
+        description="Estimate a car price from its mileage."
+    )
     parser.add_argument(
-        "--model", default=str(PROJECT_ROOT / "data" / "model.json"), help="JSON file containing theta0 and theta1"
+        "--model",
+        default=str(PROJECT_ROOT / "data" / "model.json"),
+        help="JSON file containing theta0 and theta1",
     )
     return parser
 
