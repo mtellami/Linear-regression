@@ -4,7 +4,7 @@ A simple linear regression that predicts a car's price from its mileage using gr
 
 Full documentation:
 
-<a href="https://mtellami.github.io/Linear-regression/" style="display:inline-block;padding:14px 28px;background-color:#2563eb;color:#ffffff;text-decoration:none;border-radius:8px;font-size:18px;font-weight:700;">Interactive guide</a>
+[![Interactive guide](https://img.shields.io/badge/Interactive_guide-open-2563eb?style=for-the-badge)](https://mtellami.github.io/Linear-regression/)
 
 ## Requirements
 
