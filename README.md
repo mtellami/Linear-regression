@@ -98,7 +98,3 @@ Training stops when the decrease in mean squared error is negligible: `0 <= impr
 - **R2**: coefficient of determination; `1` is a perfect fit, `0` matches a constant-mean predictor, negative values are worse, and it is undefined when target prices are constant
 
 Evaluating against the training CSV measures fit on that dataset, not accuracy on unseen cars. Estimates far outside the training mileage range are extrapolations and can be negative; that sign is preserved in the output.
-
-## AI assistance
-
-AI tools assisted with drafting this implementation and documentation. Design choices were reviewed against the project specification and verified by running the programs; all commands, outputs, and trade-offs remain the responsibility of the project authors.
