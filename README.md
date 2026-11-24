@@ -2,6 +2,10 @@
 
 A single-feature linear regression that estimates a car's price from its mileage using gradient descent. The core implementation uses only the Python standard library; Matplotlib is optional and needed only for plots.
 
+## Result
+
+![Car price data with the fitted linear regression line](assets/regression.png)
+
 ## Requirements
 
 - Python 3.10 or newer
@@ -29,7 +33,7 @@ python3 src/evaluate.py
 | `src/evaluate.py` | Precision-evaluation CLI |
 | `data/data.csv` | Supplied `km,price` dataset |
 | `data/model.json` | Generated parameters (ignored by Git) |
-| `requirements.pdf` | Subject specification |
+| `assets/regression.png` | Plot of the data and fitted line shown above |
 
 `README.html` contains an interactive explanatory guide to the same concepts.
 
