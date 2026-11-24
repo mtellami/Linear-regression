@@ -45,6 +45,7 @@ class Metrics:
 
 
 def parse_mileage(text: str) -> float:
+    """Validate mileage input and return it as a nonnegative finite float."""
     value = text.strip()
     if not value:
         raise ValueError("mileage cannot be empty")
@@ -64,6 +65,7 @@ def parse_mileage(text: str) -> float:
 def _parse_csv_number(
     text: str, path: str, row_number: int, column: str
 ) -> float:
+    """Parse a CSV cell, reporting its row and column when validation fails."""
     value = text.strip()
     if not value:
         raise DataError(
@@ -89,6 +91,7 @@ def _parse_csv_number(
 
 
 def load_data(path: str) -> tuple[list[float], list[float]]:
+    """Load and validate the mileage and price columns from a CSV file."""
     try:
         with open(path, newline="", encoding="utf-8-sig") as handle:
             reader = csv.reader(handle)
@@ -132,10 +135,12 @@ def load_data(path: str) -> tuple[list[float], list[float]]:
 
 
 def predict_price(model: Model, mileage: float) -> float:
+    """Estimate a price from mileage using theta0 + theta1 * mileage."""
     return model.theta0 + model.theta1 * mileage
 
 
 def save_model(model: Model, path: str) -> None:
+    """Atomically write theta0 and theta1 to a JSON file at path."""
     payload = {"theta0": model.theta0, "theta1": model.theta1}
     directory = os.path.dirname(os.path.abspath(path))
     descriptor, temporary_path = tempfile.mkstemp(
@@ -153,6 +158,7 @@ def save_model(model: Model, path: str) -> None:
 
 
 def load_model(path: str) -> Model:
+    """Read model parameters from JSON, defaulting to zeros if absent."""
     try:
         with open(path, encoding="utf-8") as handle:
             payload = json.load(handle)
@@ -178,6 +184,7 @@ def load_model(path: str) -> Model:
 
 
 def standardize(values: list[float]) -> tuple[list[float], float, float]:
+    """Return standardized values plus their mean and population std."""
     if len(values) < 2:
         raise TrainingError("need at least 2 values to standardize")
     mean = sum(values) / len(values)
@@ -191,6 +198,7 @@ def standardize(values: list[float]) -> tuple[list[float], float, float]:
 def mse(
     z: list[float], prices: list[float], theta0: float, theta1: float
 ) -> float:
+    """Return the mean squared error of the current predictions."""
     return sum(
         (theta0 + theta1 * value - price) ** 2
         for value, price in zip(z, prices)
@@ -204,6 +212,7 @@ def gradient_step(
     theta1: float,
     learning_rate: float,
 ) -> tuple[float, float]:
+    """Compute one simultaneous gradient step from the current coefficients."""
     errors = [
         theta0 + theta1 * value - price for value, price in zip(z, prices)
     ]
@@ -224,6 +233,7 @@ def train(
     max_iterations: int = 100000,
     tolerance: float = 1e-10,
 ) -> TrainingResult:
+    """Fit the model and return parameters, iterations, loss, convergence."""
     if len(mileages) != len(prices) or len(mileages) < 2:
         raise TrainingError(
             "training needs at least 2 matching mileage and price values"
@@ -288,6 +298,7 @@ def train(
 def evaluate(
     mileages: list[float], prices: list[float], model: Model
 ) -> Metrics:
+    """Compute MAE and RMSE, and R2 unless prices are constant."""
     if len(mileages) != len(prices) or not mileages:
         raise ValueError("evaluation needs matching mileage and price values")
     errors = [

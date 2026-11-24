@@ -13,6 +13,7 @@ PROJECT_ROOT = Path(__file__).resolve().parent.parent
 
 
 def build_parser() -> argparse.ArgumentParser:
+    """Build the prediction command-line parser."""
     parser = argparse.ArgumentParser(
         description="Estimate a car price from its mileage."
     )
@@ -25,6 +26,7 @@ def build_parser() -> argparse.ArgumentParser:
 
 
 def main(argv: list[str] | None = None) -> int:
+    """Load the model, prompt for a mileage, and print the estimate."""
     args = build_parser().parse_args(argv)
     try:
         model = load_model(args.model)

@@ -13,6 +13,7 @@ PROJECT_ROOT = Path(__file__).resolve().parent.parent
 
 
 def build_parser() -> argparse.ArgumentParser:
+    """Build the evaluation command-line parser."""
     parser = argparse.ArgumentParser(
         description="Calculate MAE, RMSE and R2 for a trained model."
     )
@@ -30,6 +31,7 @@ def build_parser() -> argparse.ArgumentParser:
 
 
 def main(argv: list[str] | None = None) -> int:
+    """Load data and model, then print MAE, RMSE, and R2."""
     args = build_parser().parse_args(argv)
     try:
         mileages, prices = load_data(args.data)

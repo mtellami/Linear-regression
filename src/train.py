@@ -17,6 +17,7 @@ PROJECT_ROOT = Path(__file__).resolve().parent.parent
 
 
 def positive_float(text: str) -> float:
+    """Argparse validator for positive finite floating-point values."""
     try:
         value = float(text)
     except ValueError as exc:
@@ -27,6 +28,7 @@ def positive_float(text: str) -> float:
 
 
 def positive_int(text: str) -> int:
+    """Argparse validator for positive integer values."""
     try:
         value = int(text)
     except ValueError as exc:
@@ -37,6 +39,7 @@ def positive_int(text: str) -> int:
 
 
 def build_parser() -> argparse.ArgumentParser:
+    """Build the training command-line parser."""
     parser = argparse.ArgumentParser(
         description="Train a linear regression model for car prices."
     )
@@ -68,6 +71,7 @@ def plot_results(
     output: str | None,
     show: bool,
 ) -> None:
+    """Plot the data and fitted line, optionally saving or displaying it."""
     try:
         import matplotlib
 
@@ -105,6 +109,7 @@ def plot_results(
 
 
 def main(argv: list[str] | None = None) -> int:
+    """Train the model, save it, optionally plot, and report the result."""
     args = build_parser().parse_args(argv)
     try:
         mileages, prices = load_data(args.data)
