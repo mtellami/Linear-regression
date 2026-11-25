@@ -10,7 +10,6 @@ PROJECT_ROOT = Path(__file__).resolve().parent.parent
 DATA_PATH = PROJECT_ROOT / "data" / "data.csv"
 MODEL_PATH = PROJECT_ROOT / "data" / "model.json"
 LEARNING_RATE = 0.01
-MAX_ITERATIONS = 100000
 
 
 def save_model(model: Model, path: str) -> None:
@@ -56,27 +55,29 @@ def plot_results(
         ) from exc
 
     figure, axes = plt.subplots()
-    axes.scatter(mileages, prices, label="data")
-    low = min(mileages)
-    high = max(mileages)
-    axes.plot(
-        [low, high],
-        [predict_price(model, low), predict_price(model, high)],
-        color="tab:red",
-        label="fit",
-    )
-    axes.set_xlabel("Mileage (km)")
-    axes.set_ylabel("Price")
-    axes.legend()
-    axes.grid(True, alpha=0.3)
-    if output:
-        directory = os.path.dirname(os.path.abspath(output))
-        os.makedirs(directory, exist_ok=True)
-        figure.savefig(output)
-        print(f"Plot saved to {output}")
-    if show:
-        plt.show()
-    plt.close(figure)
+    try:
+        axes.scatter(mileages, prices, label="data")
+        low = min(mileages)
+        high = max(mileages)
+        axes.plot(
+            [low, high],
+            [predict_price(model, low), predict_price(model, high)],
+            color="tab:red",
+            label="fit",
+        )
+        axes.set_xlabel("Mileage (km)")
+        axes.set_ylabel("Price")
+        axes.legend()
+        axes.grid(True, alpha=0.3)
+        if output:
+            directory = os.path.dirname(os.path.abspath(output))
+            os.makedirs(directory, exist_ok=True)
+            figure.savefig(output)
+            print(f"Plot saved to {output}")
+        if show:
+            plt.show()
+    finally:
+        plt.close(figure)
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -84,24 +85,20 @@ def main(argv: list[str] | None = None) -> int:
     args = build_parser().parse_args(argv)
     try:
         mileages, prices = load_data(str(DATA_PATH))
-        model, iterations, final_loss, converged = train(
-            mileages, prices, LEARNING_RATE, MAX_ITERATIONS
+        model, iterations, final_loss = train(
+            mileages, prices, LEARNING_RATE
         )
         save_model(model, str(MODEL_PATH))
         if args.plot or args.plot_output:
             plot_results(mileages, prices, model, args.plot_output, args.plot)
+    except KeyboardInterrupt:
+        print("\nInterrupted.", file=sys.stderr)
+        return 130
     except (ValueError, OSError, ImportError) as exc:
         print(f"Error: {exc}", file=sys.stderr)
         return 1
 
-    if converged:
-        print(f"Converged after {iterations} iterations")
-    else:
-        print(
-            f"Warning: reached {MAX_ITERATIONS} iterations " "without converging",
-            file=sys.stderr,
-        )
-        print(f"Training stopped after {iterations} iterations")
+    print(f"Converged after {iterations} iterations")
     print(f"theta0 = {model.theta0:.6f}")
     print(f"theta1 = {model.theta1:.6f}")
     print(f"Final loss (MSE) = {final_loss:.6f}")
