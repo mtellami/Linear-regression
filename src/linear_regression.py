@@ -1,26 +1,7 @@
 import csv
 import json
 import math
-import os
-import tempfile
 from dataclasses import dataclass
-from typing import Optional
-
-
-class LinearRegressionError(Exception):
-    pass
-
-
-class DataError(LinearRegressionError):
-    pass
-
-
-class ModelError(LinearRegressionError):
-    pass
-
-
-class TrainingError(LinearRegressionError):
-    pass
 
 
 @dataclass(frozen=True)
@@ -29,179 +10,27 @@ class Model:
     theta1: float
 
 
-@dataclass(frozen=True)
-class TrainingResult:
-    model: Model
-    iterations: int
-    final_loss: float
-    converged: bool
-
-
-@dataclass(frozen=True)
-class Metrics:
-    mae: float
-    rmse: float
-    r2: Optional[float]
-
-
-def parse_mileage(text: str) -> float:
-    """Validate mileage input and return it as a nonnegative finite float."""
-    value = text.strip()
-    if not value:
-        raise ValueError("mileage cannot be empty")
-    try:
-        mileage = float(value)
-    except ValueError as exc:
-        raise ValueError(
-            f"invalid mileage {value!r}: expected a number"
-        ) from exc
-    if not math.isfinite(mileage):
-        raise ValueError("mileage must be a finite number")
-    if mileage < 0:
-        raise ValueError("mileage cannot be negative")
-    return mileage
-
-
-def _parse_csv_number(
-    text: str, path: str, row_number: int, column: str
-) -> float:
-    """Parse a CSV cell, reporting its row and column when validation fails."""
-    value = text.strip()
-    if not value:
-        raise DataError(
-            f"{path}: row {row_number} has an empty {column} value"
-        )
-    try:
-        number = float(value)
-    except ValueError as exc:
-        raise DataError(
-            f"{path}: row {row_number} has a non-numeric {column} "
-            f"value {value!r}"
-        ) from exc
-    if not math.isfinite(number):
-        raise DataError(
-            f"{path}: row {row_number} has a non-finite {column} "
-            f"value {value!r}"
-        )
-    if number < 0:
-        raise DataError(
-            f"{path}: row {row_number} has a negative {column} value {value!r}"
-        )
-    return number
-
-
-def load_data(path: str) -> tuple[list[float], list[float]]:
-    """Load and validate the mileage and price columns from a CSV file."""
-    try:
-        with open(path, newline="", encoding="utf-8-sig") as handle:
-            reader = csv.reader(handle)
-            try:
-                header = next(reader)
-            except StopIteration as exc:
-                raise DataError(
-                    f"{path}: missing header row with km and price columns"
-                ) from exc
-            columns = [name.strip() for name in header]
-            if "km" not in columns or "price" not in columns:
-                raise DataError(
-                    f"{path}: expected km and price columns, got {header!r}"
-                )
-            km_index = columns.index("km")
-            price_index = columns.index("price")
-            mileages: list[float] = []
-            prices: list[float] = []
-            for row_number, row in enumerate(reader, start=2):
-                if not row or all(not cell.strip() for cell in row):
-                    continue
-                if len(row) <= max(km_index, price_index):
-                    raise DataError(
-                        f"{path}: row {row_number} is missing values"
-                    )
-                mileages.append(
-                    _parse_csv_number(row[km_index], path, row_number, "km")
-                )
-                prices.append(
-                    _parse_csv_number(
-                        row[price_index], path, row_number, "price"
-                    )
-                )
-    except OSError as exc:
-        raise DataError(f"cannot read data file {path}: {exc}") from exc
-    if len(mileages) < 2:
-        raise DataError(
-            f"{path}: need at least 2 valid rows, found {len(mileages)}"
-        )
-    return mileages, prices
-
-
 def predict_price(model: Model, mileage: float) -> float:
     """Estimate a price from mileage using theta0 + theta1 * mileage."""
     return model.theta0 + model.theta1 * mileage
 
 
-def save_model(model: Model, path: str) -> None:
-    """Atomically write theta0 and theta1 to a JSON file at path."""
-    payload = {"theta0": model.theta0, "theta1": model.theta1}
-    directory = os.path.dirname(os.path.abspath(path))
-    descriptor, temporary_path = tempfile.mkstemp(
-        prefix=".model-", suffix=".tmp", dir=directory
-    )
-    try:
-        with os.fdopen(descriptor, "w", encoding="utf-8") as handle:
-            json.dump(payload, handle, indent=2)
-            handle.write("\n")
-        os.replace(temporary_path, path)
-    except BaseException:
-        if os.path.exists(temporary_path):
-            os.unlink(temporary_path)
-        raise
-
-
-def load_model(path: str) -> Model:
-    """Read model parameters from JSON, defaulting to zeros if absent."""
-    try:
-        with open(path, encoding="utf-8") as handle:
-            payload = json.load(handle)
-    except FileNotFoundError:
-        return Model(0.0, 0.0)
-    except (OSError, json.JSONDecodeError) as exc:
-        raise ModelError(f"cannot read model file {path}: {exc}") from exc
-    if not isinstance(payload, dict):
-        raise ModelError(f"model file {path} must contain a JSON object")
-    for key in ("theta0", "theta1"):
-        if key not in payload:
-            raise ModelError(f"model file {path} is missing {key!r}")
-        value = payload[key]
-        if (
-            isinstance(value, bool)
-            or not isinstance(value, (int, float))
-            or not math.isfinite(value)
-        ):
-            raise ModelError(
-                f"model file {path} has an invalid {key!r}: {value!r}"
-            )
-    return Model(float(payload["theta0"]), float(payload["theta1"]))
-
-
 def standardize(values: list[float]) -> tuple[list[float], float, float]:
     """Return standardized values plus their mean and population std."""
     if len(values) < 2:
-        raise TrainingError("need at least 2 values to standardize")
+        raise ValueError("need at least 2 values to standardize")
     mean = sum(values) / len(values)
     variance = sum((value - mean) ** 2 for value in values) / len(values)
     std = math.sqrt(variance)
     if std == 0.0:
-        raise TrainingError("mileage values have no variation")
+        raise ValueError("mileage values have no variation")
     return [(value - mean) / std for value in values], mean, std
 
 
-def mse(
-    z: list[float], prices: list[float], theta0: float, theta1: float
-) -> float:
+def mse(z: list[float], prices: list[float], theta0: float, theta1: float) -> float:
     """Return the mean squared error of the current predictions."""
     return sum(
-        (theta0 + theta1 * value - price) ** 2
-        for value, price in zip(z, prices)
+        (theta0 + theta1 * value - price) ** 2 for value, price in zip(z, prices)
     ) / len(prices)
 
 
@@ -213,15 +42,11 @@ def gradient_step(
     learning_rate: float,
 ) -> tuple[float, float]:
     """Compute one simultaneous gradient step from the current coefficients."""
-    errors = [
-        theta0 + theta1 * value - price for value, price in zip(z, prices)
-    ]
+    errors = [theta0 + theta1 * value - price for value, price in zip(z, prices)]
     size = len(prices)
     slope0 = learning_rate * sum(errors) / size
     slope1 = (
-        learning_rate
-        * sum(error * value for error, value in zip(errors, z))
-        / size
+        learning_rate * sum(error * value for error, value in zip(errors, z)) / size
     )
     return theta0 - slope0, theta1 - slope1
 
@@ -232,22 +57,10 @@ def train(
     learning_rate: float = 0.01,
     max_iterations: int = 100000,
     tolerance: float = 1e-10,
-) -> TrainingResult:
+) -> tuple[Model, int, float, bool]:
     """Fit the model and return parameters, iterations, loss, convergence."""
     if len(mileages) != len(prices) or len(mileages) < 2:
-        raise TrainingError(
-            "training needs at least 2 matching mileage and price values"
-        )
-    if not math.isfinite(learning_rate) or learning_rate <= 0:
-        raise TrainingError("learning rate must be a positive finite number")
-    if (
-        isinstance(max_iterations, bool)
-        or not isinstance(max_iterations, int)
-        or max_iterations < 1
-    ):
-        raise TrainingError("max iterations must be a positive integer")
-    if not math.isfinite(tolerance) or tolerance < 0:
-        raise TrainingError("tolerance must be a nonnegative finite number")
+        raise ValueError("training needs at least 2 matching mileage and price values")
 
     z, mean, std = standardize(mileages)
     theta0 = 0.0
@@ -258,18 +71,15 @@ def train(
     converged = False
 
     for iteration in range(1, max_iterations + 1):
-        theta0, theta1 = gradient_step(
-            z, prices, theta0, theta1, learning_rate
-        )
-        if not math.isfinite(theta0) or not math.isfinite(theta1):
-            raise TrainingError(
-                "training produced non-finite coefficients at iteration "
-                f"{iteration}; lower the learning rate"
-            )
+        theta0, theta1 = gradient_step(z, prices, theta0, theta1, learning_rate)
         current_loss = mse(z, prices, theta0, theta1)
-        if not math.isfinite(current_loss):
-            raise TrainingError(
-                "training produced a non-finite loss at iteration "
+        if not (
+            math.isfinite(theta0)
+            and math.isfinite(theta1)
+            and math.isfinite(current_loss)
+        ):
+            raise ValueError(
+                f"training produced non-finite values at iteration "
                 f"{iteration}; lower the learning rate"
             )
         improvement = previous_loss - current_loss
@@ -283,11 +93,9 @@ def train(
 
     theta1_original = theta1 / std
     theta0_original = theta0 - theta1_original * mean
-    if not math.isfinite(theta0_original) or not math.isfinite(
-        theta1_original
-    ):
-        raise TrainingError("training produced non-finite parameters")
-    return TrainingResult(
+    if not (math.isfinite(theta0_original) and math.isfinite(theta1_original)):
+        raise ValueError("training produced non-finite parameters")
+    return (
         Model(theta0_original, theta1_original),
         iterations,
         current_loss,
@@ -297,7 +105,7 @@ def train(
 
 def evaluate(
     mileages: list[float], prices: list[float], model: Model
-) -> Metrics:
+) -> tuple[float, float, float | None]:
     """Compute MAE and RMSE, and R2 unless prices are constant."""
     if len(mileages) != len(prices) or not mileages:
         raise ValueError("evaluation needs matching mileage and price values")
@@ -309,11 +117,50 @@ def evaluate(
     squared_error = sum(error * error for error in errors)
     mean_price = sum(prices) / size
     total_variance = sum((price - mean_price) ** 2 for price in prices)
-    r2: Optional[float] = (
+    r2: float | None = (
         None if total_variance == 0.0 else 1.0 - squared_error / total_variance
     )
-    return Metrics(
-        mae=sum(abs(error) for error in errors) / size,
-        rmse=math.sqrt(squared_error / size),
-        r2=r2,
-    )
+    mae = sum(abs(error) for error in errors) / size
+    rmse = math.sqrt(squared_error / size)
+    return mae, rmse, r2
+
+
+def load_data(path: str) -> tuple[list[float], list[float]]:
+    """Read mileage and price columns from a CSV file."""
+    mileages: list[float] = []
+    prices: list[float] = []
+    try:
+        with open(path, newline="", encoding="utf-8-sig") as handle:
+            for row in csv.DictReader(handle):
+                mileages.append(float(row["km"]))
+                prices.append(float(row["price"]))
+    except (OSError, KeyError, TypeError, ValueError) as exc:
+        raise ValueError(f"cannot read data from {path}: {exc}") from exc
+    if len(mileages) < 2:
+        raise ValueError(f"{path}: need at least 2 valid rows")
+    return mileages, prices
+
+
+def load_model(path: str) -> Model:
+    """Read model parameters from JSON, defaulting to zeros if absent."""
+    try:
+        with open(path, encoding="utf-8") as handle:
+            payload = json.load(handle)
+    except FileNotFoundError:
+        return Model(0.0, 0.0)
+    except (OSError, ValueError) as exc:
+        raise ValueError(f"cannot read model file {path}: {exc}") from exc
+
+    if not isinstance(payload, dict):
+        raise ValueError(f"model file {path} must contain a JSON object")
+    try:
+        theta0 = float(payload["theta0"])
+        theta1 = float(payload["theta1"])
+    except (KeyError, TypeError, ValueError) as exc:
+        raise ValueError(
+            f"model file {path} must contain numeric theta0 and theta1"
+        ) from exc
+
+    if not (math.isfinite(theta0) and math.isfinite(theta1)):
+        raise ValueError(f"model file {path} must contain finite parameters")
+    return Model(theta0, theta1)

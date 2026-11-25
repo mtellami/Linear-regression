@@ -19,4 +19,4 @@ python3 src/predict.py
 python3 src/evaluate.py
 ```
 
-`train.py` writes `data/model.json`, `predict.py` prompts for a mileage, and `evaluate.py` prints MAE, RMSE, and R2. Add `--plot` or `--plot-output PATH` to visualize the data and fitted line. Run any command with `--help` for all options.
+`train.py` writes `data/model.json`, `predict.py` prompts for a mileage, and `evaluate.py` prints MAE, RMSE, and R2. Add `--plot` or `--plot-output PATH` to `train.py` to visualize the data and fitted line.

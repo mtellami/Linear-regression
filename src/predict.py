@@ -1,37 +1,38 @@
-import argparse
+import math
 import sys
 from pathlib import Path
 
-from linear_regression import (
-    LinearRegressionError,
-    load_model,
-    parse_mileage,
-    predict_price,
-)
+from linear_regression import load_model, predict_price
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
+MODEL_PATH = PROJECT_ROOT / "data" / "model.json"
 
 
-def build_parser() -> argparse.ArgumentParser:
-    """Build the prediction command-line parser."""
-    parser = argparse.ArgumentParser(
-        description="Estimate a car price from its mileage."
-    )
-    parser.add_argument(
-        "--model",
-        default=str(PROJECT_ROOT / "data" / "model.json"),
-        help="JSON file containing theta0 and theta1",
-    )
-    return parser
-
-
-def main(argv: list[str] | None = None) -> int:
-    """Load the model, prompt for a mileage, and print the estimate."""
-    args = build_parser().parse_args(argv)
+def parse_mileage(text: str) -> float:
+    """Validate mileage input and return it as a nonnegative finite float."""
+    value = text.strip()
+    if not value:
+        raise ValueError("mileage cannot be empty")
     try:
-        model = load_model(args.model)
+        mileage = float(value)
+    except ValueError as exc:
+        raise ValueError(
+            f"invalid mileage {value!r}: expected a number"
+        ) from exc
+
+    if not math.isfinite(mileage):
+        raise ValueError("mileage must be a finite number")
+    if mileage < 0:
+        raise ValueError("mileage cannot be negative")
+    return mileage
+
+
+def main() -> int:
+    """Load the model, prompt for a mileage, and print the estimate."""
+    try:
+        model = load_model(str(MODEL_PATH))
         mileage = parse_mileage(input("Mileage: "))
-    except (LinearRegressionError, ValueError) as exc:
+    except (ValueError, OSError) as exc:
         print(f"Error: {exc}", file=sys.stderr)
         return 1
     except (EOFError, KeyboardInterrupt):

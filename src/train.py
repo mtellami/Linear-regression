@@ -1,41 +1,27 @@
 import argparse
-import math
+import json
 import os
 import sys
 from pathlib import Path
 
-from linear_regression import (
-    DataError,
-    TrainingError,
-    load_data,
-    predict_price,
-    save_model,
-    train,
-)
+from linear_regression import Model, load_data, predict_price, train
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
+DATA_PATH = PROJECT_ROOT / "data" / "data.csv"
+MODEL_PATH = PROJECT_ROOT / "data" / "model.json"
+LEARNING_RATE = 0.01
+MAX_ITERATIONS = 100000
 
 
-def positive_float(text: str) -> float:
-    """Argparse validator for positive finite floating-point values."""
-    try:
-        value = float(text)
-    except ValueError as exc:
-        raise argparse.ArgumentTypeError("must be a number") from exc
-    if not math.isfinite(value) or value <= 0:
-        raise argparse.ArgumentTypeError("must be a positive finite number")
-    return value
-
-
-def positive_int(text: str) -> int:
-    """Argparse validator for positive integer values."""
-    try:
-        value = int(text)
-    except ValueError as exc:
-        raise argparse.ArgumentTypeError("must be an integer") from exc
-    if value < 1:
-        raise argparse.ArgumentTypeError("must be a positive integer")
-    return value
+def save_model(model: Model, path: str) -> None:
+    """Write theta0 and theta1 to a JSON file at path."""
+    with open(path, "w", encoding="utf-8") as handle:
+        json.dump(
+            {"theta0": model.theta0, "theta1": model.theta1},
+            handle,
+            indent=2,
+        )
+        handle.write("\n")
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -44,30 +30,16 @@ def build_parser() -> argparse.ArgumentParser:
         description="Train a linear regression model for car prices."
     )
     parser.add_argument(
-        "--data",
-        default=str(PROJECT_ROOT / "data" / "data.csv"),
-        help="CSV file with km,price columns",
-    )
-    parser.add_argument(
-        "--model",
-        default=str(PROJECT_ROOT / "data" / "model.json"),
-        help="JSON file to save theta0 and theta1",
-    )
-    parser.add_argument("--learning-rate", type=positive_float, default=0.01)
-    parser.add_argument("--max-iterations", type=positive_int, default=100000)
-    parser.add_argument(
         "--plot", action="store_true", help="display the data and fitted line"
     )
-    parser.add_argument(
-        "--plot-output", metavar="PATH", help="save the graph to PATH"
-    )
+    parser.add_argument("--plot-output", metavar="PATH", help="save the graph to PATH")
     return parser
 
 
 def plot_results(
     mileages: list[float],
     prices: list[float],
-    model,
+    model: Model,
     output: str | None,
     show: bool,
 ) -> None:
@@ -79,9 +51,8 @@ def plot_results(
             matplotlib.use("Agg")
         import matplotlib.pyplot as plt
     except ImportError as exc:
-        raise RuntimeError(
-            "plotting requires matplotlib: "
-            "pip install -r requirements-plot.txt"
+        raise ImportError(
+            "plotting requires matplotlib: pip install matplotlib"
         ) from exc
 
     figure, axes = plt.subplots()
@@ -112,38 +83,29 @@ def main(argv: list[str] | None = None) -> int:
     """Train the model, save it, optionally plot, and report the result."""
     args = build_parser().parse_args(argv)
     try:
-        mileages, prices = load_data(args.data)
-        result = train(
-            mileages, prices, args.learning_rate, args.max_iterations
+        mileages, prices = load_data(str(DATA_PATH))
+        model, iterations, final_loss, converged = train(
+            mileages, prices, LEARNING_RATE, MAX_ITERATIONS
         )
-        save_model(result.model, args.model)
+        save_model(model, str(MODEL_PATH))
         if args.plot or args.plot_output:
-            plot_results(
-                mileages, prices, result.model, args.plot_output, args.plot
-            )
-    except (
-        DataError,
-        TrainingError,
-        OSError,
-        RuntimeError,
-        ValueError,
-    ) as exc:
+            plot_results(mileages, prices, model, args.plot_output, args.plot)
+    except (ValueError, OSError, ImportError) as exc:
         print(f"Error: {exc}", file=sys.stderr)
         return 1
 
-    if result.converged:
-        print(f"Converged after {result.iterations} iterations")
+    if converged:
+        print(f"Converged after {iterations} iterations")
     else:
         print(
-            f"Warning: reached {args.max_iterations} iterations "
-            "without converging",
+            f"Warning: reached {MAX_ITERATIONS} iterations " "without converging",
             file=sys.stderr,
         )
-        print(f"Training stopped after {result.iterations} iterations")
-    print(f"theta0 = {result.model.theta0:.6f}")
-    print(f"theta1 = {result.model.theta1:.6f}")
-    print(f"Final loss (MSE) = {result.final_loss:.6f}")
-    print(f"Model saved to {args.model}")
+        print(f"Training stopped after {iterations} iterations")
+    print(f"theta0 = {model.theta0:.6f}")
+    print(f"theta1 = {model.theta1:.6f}")
+    print(f"Final loss (MSE) = {final_loss:.6f}")
+    print(f"Model saved to {MODEL_PATH}")
     return 0
 
 
